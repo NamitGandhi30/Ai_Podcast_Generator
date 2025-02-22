@@ -21,7 +21,7 @@ export default function Hero() {
             placeholder="Describe the podcast you want to create" 
             className="w-full p-3 rounded-lg text-black" 
           />
-          <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition">
+          <button className="bg-purple-600 hover:bg-purple-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition">
             Generate
           </button>
         </div>
