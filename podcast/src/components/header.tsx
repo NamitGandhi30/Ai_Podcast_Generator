@@ -6,7 +6,7 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 const Header = () => {
 
   return (
-    <header className="fixed top-0 w-full bg-black shadow-md p-4 z-50">
+    <header className="fixed top-0 w-full bg-black/50 backdrop-blur-lg shadow-md p-4 z-50">
       <div className="container mx-auto flex justify-between items-center">
         <Link href="/" className="flex">
           <Image
@@ -32,7 +32,7 @@ const Header = () => {
           </Button>
         </nav>
 
-
+        
           <SignedOut>
           <SignInButton forceRedirectUrl="/sign-in" >
               <Button variant="outline" className="bg-purple-600 text-white hover:bg-purple-700">Login</Button>
