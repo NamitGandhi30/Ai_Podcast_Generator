@@ -13,7 +13,7 @@ class ScriptGenerator:
         return ["AI Ethics", "Climate Tech", "Web3 Innovations", "Quantum Computing"]
 
     def generate_script(self, user_input: Dict):
-        try:
+        try:  # ✅ FIXED: Correct indentation
             print("✅ Received Input:", user_input)
             prompt = self._build_prompt(user_input)
             print("📜 Generated Prompt:", prompt)
@@ -21,13 +21,19 @@ class ScriptGenerator:
             response = self.model.generate_content(prompt)
             print("🔄 Raw Response Object:", response)
 
-            # Ensure response contains valid text
+            # ✅ Ensure response contains valid text
             if not response or not hasattr(response, "candidates") or not response.candidates:
                 print("❌ Error: Gemini AI returned an empty response")
                 return "Error: Gemini AI did not return valid text."
 
-            # Extract text correctly using dot notation
-            script_text = response.candidates[0].content.parts[0].text
+            # ✅ Updated response extraction (Fix KeyError issues)
+            first_candidate = response.candidates[0]
+
+            if not hasattr(first_candidate, "content") or not first_candidate.content.parts:
+                print("❌ Error: Missing content in response")
+                return "Error: No content received from AI model."
+
+            script_text = first_candidate.content.parts[0].text  # ✅ Correct response extraction
             print("📝 Raw Script Text:", script_text)
 
             cleaned_script = self._clean_script(script_text, user_input["speakers"])

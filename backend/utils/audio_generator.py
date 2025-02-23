@@ -1,67 +1,145 @@
-import torch
+# audio_generator.py
+from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
 import io
-import soundfile as sf
-from transformers import VitsModel, AutoTokenizer
+import tempfile
+import os
+from gtts import gTTS
 from pydub import AudioSegment
-import numpy as np
+from pydub.effects import speedup, low_pass_filter
 
-class TTSEngine:
-    def __init__(self):
-        self.models = {
-            "Bella": {
-                "model": VitsModel.from_pretrained("facebook/mms-tts-eng"),
-                "tokenizer": AutoTokenizer.from_pretrained("facebook/mms-tts-eng"),
-                "speed": 0.9,  # Slower speech speed
-                "pitch": -2,   # Deeper voice
-            },
-            "James": {
-                "model": VitsModel.from_pretrained("facebook/mms-tts-spa"),
-                "tokenizer": AutoTokenizer.from_pretrained("facebook/mms-tts-spa"),
-                "speed": 1.1,  # Slightly faster
-                "pitch": 3,    # Higher-pitched voice
-            }
-        }
-        self.default_sample_rate = 22050
+app = Flask(__name__)
+CORS(app)
 
-    def generate_audio(self, text, speaker="Bella", volume=1.0):
-        try:
-            if speaker not in self.models:
-                speaker = "Bella"  # Default fallback
+# Voice profiles with different language/accent combinations
+VOICE_PROFILES = {
+    "Bella": {
+        "lang": "en",
+        "tld": "co.uk",  # British accent
+        "speed": 1.0,
+        "pitch_adjust": 1.2,  # Higher pitch
+        "bass_boost": False
+    },
+    "James": {
+        "lang": "en",
+        "tld": "com",  # American accent
+        "speed": 0.95,
+        "pitch_adjust": 0.8,  # Lower pitch
+        "bass_boost": True
+    },
+    "Sophie": {
+        "lang": "en",
+        "tld": "com.au",  # Australian accent
+        "speed": 1.0,
+        "pitch_adjust": 1.1,
+        "bass_boost": False
+    },
+    "David": {
+        "lang": "en",
+        "tld": "ca",  # Canadian accent
+        "speed": 0.98,
+        "pitch_adjust": 0.9,
+        "bass_boost": True
+    },
+    "Default": {
+        "lang": "en",
+        "tld": "com",
+        "speed": 1.0,
+        "pitch_adjust": 1.0,
+        "bass_boost": False
+    }
+}
 
-            model_data = self.models[speaker]
-            inputs = model_data["tokenizer"](text, return_tensors="pt")
+def process_audio_segment(audio_segment, profile, user_settings=None):
+    """Apply voice profile modifications to audio segment"""
+    modified_audio = audio_segment
+    
+    # Apply user-defined pitch and loudness if provided
+    if user_settings:
+        pitch = float(user_settings.get("pitch", 1.0))
+        loudness = float(user_settings.get("loudness", 1.0))
+        modified_audio = modified_audio + (10 * loudness)  # Adjust volume
+        
+        # Pitch adjustment through sample rate
+        if pitch != 1.0:
+            new_sample_rate = int(modified_audio.frame_rate * pitch)
+            modified_audio = modified_audio._spawn(modified_audio.raw_data, overrides={
+                "frame_rate": new_sample_rate
+            })
+            modified_audio = modified_audio.set_frame_rate(44100)
+    
+    # Apply profile-specific modifications
+    if profile["speed"] != 1.0:
+        modified_audio = speedup(modified_audio, playback_speed=profile["speed"])
+    
+    if profile["bass_boost"]:
+        modified_audio = low_pass_filter(modified_audio, 1000)
+    
+    return modified_audio
 
-            with torch.no_grad():
-                output = model_data["model"](**inputs).waveform
+@app.route("/get-voices", methods=["GET"])
+def get_voices():
+    return jsonify({"voices": list(VOICE_PROFILES.keys())})
 
-            audio_np = output.numpy().squeeze()
-            audio_np = audio_np / np.max(np.abs(audio_np))  # Normalize audio
+@app.route("/generate_audio", methods=["POST"])
+def generate_audio():
+    try:
+        data = request.json
+        script = data.get("script", "").strip()
+        speakers = data.get("speakers", {})
 
-            audio_segment = AudioSegment(
-                np.int16(audio_np * 32767).tobytes(),
-                frame_rate=self.default_sample_rate,
-                sample_width=2,
-                channels=1
-            )
+        if not script:
+            return jsonify({"error": "No text provided"}), 400
 
-            # 🔥 Slow down or speed up speech
-            audio_segment = audio_segment._spawn(audio_segment.raw_data, overrides={
-                "frame_rate": int(audio_segment.frame_rate * model_data["speed"])
-            }).set_frame_rate(self.default_sample_rate)
+        # Create final audio file
+        combined_audio = AudioSegment.silent(duration=500)
+        
+        # Process each script segment
+        segments = script.split("\n\n")
+        
+        for segment in segments:
+            if ":" in segment:
+                speaker_name, text = segment.split(":", 1)
+                speaker_name = speaker_name.strip()
+                text = text.strip()
 
-            # 🔥 Apply pitch shift
-            audio_segment = audio_segment + model_data["pitch"]
+                # Get speaker settings
+                speaker_settings = speakers.get(speaker_name, {})
+                voice_type = speaker_settings.get("voice", "Default")
+                voice_profile = VOICE_PROFILES.get(voice_type, VOICE_PROFILES["Default"])
 
-            # 🔥 Adjust loudness
-            target_loudness = volume * 5
-            target_loudness = min(max(target_loudness, -5), 5)  # Keep within limits
-            audio_segment = audio_segment.apply_gain(target_loudness)
+                # Generate base audio with specific accent
+                temp_segment = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                tts = gTTS(text=text, lang=voice_profile["lang"], tld=voice_profile["tld"])
+                tts.save(temp_segment.name)
 
-            # Convert back to bytes
-            buffer = io.BytesIO()
-            audio_segment.export(buffer, format="wav")
-            return buffer.getvalue()
+                # Load and process audio segment
+                audio_segment = AudioSegment.from_mp3(temp_segment.name)
+                
+                # Apply voice profile and user modifications
+                modified_audio = process_audio_segment(audio_segment, voice_profile, speaker_settings)
 
-        except Exception as e:
-            print(f"❌ Audio generation error: {str(e)}")
-            return None
+                # Add processed segment with pause
+                combined_audio += modified_audio + AudioSegment.silent(duration=300)
+
+                # Cleanup
+                temp_segment.close()
+                os.unlink(temp_segment.name)
+
+        # Export final audio
+        temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+        combined_audio.export(temp_audio.name, format="mp3")
+        
+        return send_file(
+            temp_audio.name,
+            mimetype="audio/mpeg",
+            as_attachment=True,
+            download_name="podcast.mp3"
+        )
+
+    except Exception as e:
+        print(f"❌ Audio generation error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
