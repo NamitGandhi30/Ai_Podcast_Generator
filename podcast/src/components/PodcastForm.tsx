@@ -17,37 +17,29 @@ import {
 export default function PodcastForm() {
   const [script, setScript] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
-  const [loadingScript, setLoadingScript] = useState(false);
-  const [loadingAudio, setLoadingAudio] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [availableVoices, setAvailableVoices] = useState<string[]>([]);
   const [selectedVoice, setSelectedVoice] = useState("Bella");
+  const [loudness, setLoudness] = useState(1.0);
 
   useEffect(() => {
-    // Fetch available voices when component mounts
     fetch("http://localhost:5000/available_voices")
       .then((res) => res.json())
-      .then((data) => {
-        setAvailableVoices(data.voices);
-        if (data.voices.length > 0) {
-          setSelectedVoice(data.voices[0]);
-        }
-      })
-      .catch((err) => console.error("Error fetching voices:", err));
+      .then((data) => setAvailableVoices(data.voices || []))
+      .catch(() => setAvailableVoices([]));
   }, []);
 
   const generatePodcast = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoadingScript(true);
+    setLoading(true);
     setScript("");
     setAudioUrl("");
     setError("");
 
     const formData = new FormData(e.target as HTMLFormElement);
-
     try {
-      // Step 1: Generate Script
-      const scriptResponse = await fetch("http://localhost:5000/generate_script", {
+      const scriptRes = await fetch("http://localhost:5000/generate_script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -56,86 +48,41 @@ export default function PodcastForm() {
           speakers: formData.get("speakers"),
         }),
       });
-
-      if (!scriptResponse.ok) {
-        const errorData = await scriptResponse.json();
-        throw new Error(errorData.error || "Failed to generate script");
-      }
-
-      const scriptData = await scriptResponse.json();
+      const scriptData = await scriptRes.json();
       setScript(scriptData.script);
 
-      // Step 2: Generate Audio
-      setLoadingAudio(true);
-      const audioResponse = await fetch("http://localhost:5000/generate_audio", {
+      const audioRes = await fetch("http://localhost:5000/generate_audio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           script: scriptData.script,
           voice: selectedVoice,
+          loudness: loudness,
         }),
       });
-
-      if (!audioResponse.ok) {
-        const errorData = await audioResponse.json();
-        throw new Error(errorData.error || "Failed to generate audio");
-      }
-
-      const blob = await audioResponse.blob();
-      const url = URL.createObjectURL(blob);
-      setAudioUrl(url);
+      const audioBlob = await audioRes.blob();
+      setAudioUrl(URL.createObjectURL(audioBlob));
     } catch (error) {
-      console.error("Error:", error);
-      setError(error instanceof Error ? error.message : "An unknown error occurred");
+      setError("An error occurred while generating your podcast.");
     } finally {
-      setLoadingScript(false);
-      setLoadingAudio(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Card className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-xl">
-      <h2 className="text-2xl font-semibold text-center mb-4">
-        🎙️ Generate Your Podcast
-      </h2>
-
-      <form onSubmit={generatePodcast} className="space-y-4">
-        <div>
+    <div>
+      <Card className="max-w-lg mx-auto p-6 bg-white shadow-2xl rounded-xl">
+        <h2 className="text-3xl font-bold text-center mb-6">🎙️ Create Your Podcast</h2>
+        <form onSubmit={generatePodcast} className="space-y-4">
           <Label htmlFor="topic">Topic</Label>
-          <Input
-            id="topic"
-            name="topic"
-            type="text"
-            defaultValue="Technology"
-            required
-          />
-        </div>
-
-        <div>
+          <Input id="topic" name="topic" type="text" required className="focus:ring-2 focus:ring-blue-500" />
+          
           <Label htmlFor="duration">Duration (minutes)</Label>
-          <Input
-            id="duration"
-            name="duration"
-            type="number"
-            defaultValue="10"
-            min="1"
-            required
-          />
-        </div>
+          <Input id="duration" name="duration" type="number" min="1" required />
 
-        <div>
           <Label htmlFor="speakers">Number of Speakers</Label>
-          <Input
-            id="speakers"
-            name="speakers"
-            type="number"
-            defaultValue="2"
-            min="1"
-            required
-          />
-        </div>
+          <Input id="speakers" name="speakers" type="number" min="1" required />
 
-        <div>
           <Label htmlFor="voice">Voice</Label>
           <Select value={selectedVoice} onValueChange={setSelectedVoice}>
             <SelectTrigger>
@@ -149,45 +96,26 @@ export default function PodcastForm() {
               ))}
             </SelectContent>
           </Select>
-        </div>
 
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={loadingScript || loadingAudio}
-        >
-          {loadingScript || loadingAudio ? (
-            <>
-              <Loader2 className="animate-spin mr-2" /> Generating...
-            </>
-          ) : (
-            "Generate Podcast"
-          )}
-        </Button>
-      </form>
+          <Label htmlFor="loudness">Loudness</Label>
+          <Input id="loudness" name="loudness" type="range" min="0.5" max="2.0" step="0.1" value={loudness} onChange={(e) => setLoudness(parseFloat(e.target.value))} />
 
-      {error && (
-        <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-lg">
-          ⚠️ Error: {error}
-        </div>
-      )}
+          <Button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white" disabled={loading}>
+            {loading ? <Loader2 className="animate-spin mr-2" /> : "Generate Podcast"}
+          </Button>
+        </form>
 
-      {script && (
-        <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-          <h3 className="font-semibold text-lg">📜 Generated Script:</h3>
-          <p className="mt-2 text-gray-700 whitespace-pre-wrap">{script}</p>
-        </div>
-      )}
-
-      {audioUrl && (
-        <div className="mt-6 p-4 bg-blue-100 rounded-lg">
-          <h3 className="font-semibold text-lg">🎧 Listen to Your Podcast:</h3>
-          <audio controls className="w-full mt-2">
-            <source src={audioUrl} type="audio/mpeg" />
-            Your browser does not support the audio element.
-          </audio>
-        </div>
-      )}
-    </Card>
+        {error && <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-lg">⚠️ {error}</div>}
+        {script && <div className="mt-6 p-4 bg-gray-100 rounded-lg">📜 {script}</div>}
+        {audioUrl && (
+          <div className="mt-6 p-4 bg-blue-100 rounded-lg">
+            <h3 className="font-semibold text-lg">🎧 Listen:</h3>
+            <audio controls className="w-full mt-2">
+              <source src={audioUrl} type="audio/mpeg" />
+            </audio>
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }

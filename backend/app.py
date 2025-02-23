@@ -1,86 +1,95 @@
 from flask import Flask, request, jsonify, send_file
-import os
-from flask_cors import CORS
-from dotenv import load_dotenv
-from utils.script_generator import generate_script
-from utils.audio_generator import generate_audio_segments
-from elevenlabs import set_api_key, voices
+from utils.script_generator import ScriptGenerator
+from utils.audio_generator import TTSEngine
+from utils.voice_cloning import VoiceCloner
+import traceback
 import io
-
-# Load environment variables
-load_dotenv()
+import os
 
 app = Flask(__name__)
-CORS(app)
+script_gen = ScriptGenerator()
+tts_engine = TTSEngine()
+voice_cloner = VoiceCloner()
 
-# Configure ElevenLabs
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-if not ELEVENLABS_API_KEY:
-    raise ValueError("ELEVENLABS_API_KEY not found in environment variables!")
-
-set_api_key(ELEVENLABS_API_KEY)
-
-@app.route("/available_voices", methods=["GET"])
+@app.route('/available_voices', methods=['GET'])
 def available_voices():
-    try:
-        all_voices = voices()
-        voice_names = [voice.name for voice in all_voices]
-        return jsonify({"voices": voice_names})
-    except Exception as e:
-        return jsonify({"error": f"Error fetching voices: {str(e)}"}), 500
+    """Returns a list of available voices for TTS."""
+    voices = ["Bella", "James", "Alex", "Emma"]  # Modify with actual available voices
+    return jsonify({"voices": voices})
 
-@app.route("/generate_script", methods=["POST"])
-def generate_script_endpoint():
+@app.route('/generate_script', methods=['POST'])
+def generate_script():
+    """Generates a podcast script from user input."""
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "No JSON data received"}), 400
-            
-        topic = data.get("topic")
-        duration = data.get("duration")
-        speakers = data.get("speakers")
-        
-        if not all([topic, duration, speakers]):
-            return jsonify({"error": "Missing required parameters"}), 400
-            
-        script = generate_script(topic, duration, speakers)
+        if not data or not all(k in data for k in ["topic", "duration", "speakers", "mood", "location"]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        script = script_gen.generate_script(data)
+
+        if not script.strip():
+            return jsonify({"error": "Failed to generate script"}), 500
+
         return jsonify({"script": script})
-        
     except Exception as e:
-        return jsonify({"error": f"Script generation error: {str(e)}"}), 500
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
-@app.route("/generate_audio", methods=["POST"])
-def generate_audio_endpoint():
+@app.route('/generate_audio', methods=['POST'])
+def generate_audio():
+    """Generates audio from a script."""
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "No JSON data received"}), 400
-            
-        script = data.get("script")
-        selected_voice = data.get("voice", "Bella")
-        
-        if not script:
-            return jsonify({"error": "No script provided"}), 400
-        
-        # Generate audio
-        audio_data = generate_audio_segments(script, selected_voice)
-        
-        if not audio_data:
-            return jsonify({"error": "Failed to generate audio"}), 500
-        
-        # Create audio buffer
-        audio_buffer = io.BytesIO(audio_data)
-        audio_buffer.seek(0)
-        
-        return send_file(
-            audio_buffer,
-            mimetype="audio/mpeg",
-            as_attachment=True,
-            download_name="podcast.mp3"
-        )
-        
+        if not data or "script" not in data or "voice" not in data:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        audio = tts_engine.generate_audio(data["script"], speaker=data["voice"], volume=data.get("loudness", 1.0))
+        audio_buffer = io.BytesIO(audio)
+
+        return send_file(audio_buffer, mimetype="audio/wav", as_attachment=True, download_name="podcast.wav")
     except Exception as e:
-        return jsonify({"error": f"Audio generation error: {str(e)}"}), 500
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    
+from pydub import AudioSegment
+import io
+import traceback
+
+@app.route('/generate_podcast', methods=['POST'])
+def generate_podcast():
+    try:
+        data = request.json
+        required_fields = {"topic", "duration", "speakers", "mood", "location", "voice_mapping"}
+
+        if not required_fields.issubset(data):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        script = script_gen.generate_script(data)
+        full_audio = AudioSegment.silent(duration=500)  # Start with silence to merge properly
+
+        for line in script.split("\n\n"):
+            if ":" in line:
+                speaker, text = map(str.strip, line.split(":", 1))
+                voice = data["voice_mapping"].get(speaker, "Bella")  # Default to Bella
+                
+                audio_bytes = tts_engine.generate_audio(text, speaker=voice, volume=data.get("volume", 1.0))
+                
+                if audio_bytes:
+                    audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes), format="wav")
+                    full_audio += audio_segment + AudioSegment.silent(duration=300)  # Small pause between lines
+
+        # Convert final audio to bytes
+        audio_buffer = io.BytesIO()
+        full_audio.export(audio_buffer, format="wav")
+        audio_buffer.seek(0)
+
+        return send_file(audio_buffer, mimetype="audio/wav", as_attachment=True, download_name="podcast.wav")
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
