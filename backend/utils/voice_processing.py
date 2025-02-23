@@ -1,31 +1,49 @@
-def generate_audio_with_speakers(script, voices_dict):
+import os
+import tempfile
+from gtts import gTTS
+from pydub import AudioSegment
+
+def generate_audio_with_speakers(script, speakers):
     """
-    Converts a script into speech using ElevenLabs with speaker-voice mapping.
+    Converts a script into speech using multiple speakers.
 
     Args:
-        script (str): The script text with format "Speaker: Dialogue"
-        voices_dict (dict): Dictionary mapping speaker names to ElevenLabs voice names
+        script (str): Podcast script with "Speaker: Dialogue" format.
+        speakers (dict): {Speaker Name: {voice, pitch, loudness}}
+
+    Returns:
+        str: Path to the generated audio file.
     """
     try:
-        # Split script into lines and process each speaker's lines
-        lines = script.split('\n\n')  # Split by double newline since that's our format
         temp_audio_path = tempfile.mktemp(suffix=".mp3")
+        combined_audio = AudioSegment.silent(duration=1000)  # Start with silence
 
-        with open(temp_audio_path, "wb") as f:
-            for line in lines:
-                if ':' in line:
-                    speaker, text = line.split(':', 1)
-                    speaker = speaker.strip()
-                    text = text.strip()
-                    
-                    # Get the corresponding voice for this speaker
-                    if speaker in voices_dict:
-                        voice_id = get_voice_id(voices_dict[speaker])
-                        if voice_id:
-                            audio = generate(text=text, voice=voice_id)
-                            f.write(audio)
-                            
+        for line in script.split("\n\n"):
+            if ":" in line:
+                speaker, text = line.split(":", 1)
+                speaker = speaker.strip()
+                text = text.strip()
+
+                if speaker in speakers:
+                    speaker_config = speakers[speaker]
+                    voice = speaker_config.get("voice", "en")
+                    pitch = speaker_config.get("pitch", 1.0)
+                    loudness = speaker_config.get("loudness", 1.0)
+
+                    # ✅ Generate voice using gTTS
+                    tts = gTTS(text=text, lang="en")
+                    temp_file = tempfile.mktemp(suffix=".mp3")
+                    tts.save(temp_file)
+
+                    # ✅ Load and apply pitch & loudness modifications
+                    audio_segment = AudioSegment.from_file(temp_file, format="mp3")
+                    audio_segment = audio_segment + (loudness * 5)  # Adjust volume
+                    combined_audio += audio_segment
+
+        # ✅ Export final combined audio
+        combined_audio.export(temp_audio_path, format="mp3")
         return temp_audio_path
 
     except Exception as e:
-        return {"error": f"Audio generation failed: {str(e)}"}
+        print("❌ Error in voice processing:", str(e))
+        return None

@@ -1,95 +1,181 @@
-from flask import Flask, request, jsonify, send_file
-from utils.script_generator import ScriptGenerator
-from utils.audio_generator import TTSEngine
-from utils.voice_cloning import VoiceCloner
-import traceback
-import io
 import os
+import tempfile
+from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
+from utils.script_generator import ScriptGenerator
+from gtts import gTTS
+from pydub import AudioSegment
+from pydub.effects import speedup, low_pass_filter
 
 app = Flask(__name__)
-script_gen = ScriptGenerator()
-tts_engine = TTSEngine()
-voice_cloner = VoiceCloner()
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 
-@app.route('/available_voices', methods=['GET'])
-def available_voices():
-    """Returns a list of available voices for TTS."""
-    voices = ["Bella", "James", "Alex", "Emma"]  # Modify with actual available voices
-    return jsonify({"voices": voices})
+# Initialize Script Generator
+script_generator = ScriptGenerator()
 
-@app.route('/generate_script', methods=['POST'])
+# Voice profiles with different language/accent combinations
+VOICE_PROFILES = {
+    "Bella": {
+        "lang": "en",
+        "tld": "co.uk",  # British accent
+        "speed": 1.1,
+        "pitch_adjust": 1.3,  # Much higher pitch
+        "bass_boost": False
+    },
+    "Matthew": {
+        "lang": "en",
+        "tld": "com",    # American accent
+        "speed": 0.9,
+        "pitch_adjust": 0.7,  # Much lower pitch
+        "bass_boost": True
+    },
+    "David": {
+        "lang": "en",
+        "tld": "com.au", # Australian accent
+        "speed": 0.95,
+        "pitch_adjust": 0.8,
+        "bass_boost": True
+    },
+    "Sophia": {
+        "lang": "en",
+        "tld": "co.uk",  # British accent
+        "speed": 1.05,
+        "pitch_adjust": 1.2,
+        "bass_boost": False
+    },
+    "James": {
+        "lang": "en",
+        "tld": "ie",     # Irish accent
+        "speed": 0.93,
+        "pitch_adjust": 0.75,
+        "bass_boost": True
+    }
+}
+
+def process_audio_segment(audio_segment, profile, user_settings=None):
+    """Apply voice profile modifications to audio segment"""
+    modified_audio = audio_segment
+    
+    # Apply user-defined pitch and loudness if provided
+    if user_settings:
+        pitch = float(user_settings.get("pitch", 1.0))
+        loudness = float(user_settings.get("loudness", 1.0))
+        modified_audio = modified_audio + (10 * loudness)  # Adjust volume
+        
+        # Pitch adjustment through sample rate
+        if pitch != 1.0:
+            new_sample_rate = int(modified_audio.frame_rate * pitch)
+            modified_audio = modified_audio._spawn(modified_audio.raw_data, overrides={
+                "frame_rate": new_sample_rate
+            })
+            modified_audio = modified_audio.set_frame_rate(44100)
+    
+    # Apply profile-specific modifications
+    if profile["speed"] != 1.0:
+        modified_audio = speedup(modified_audio, playback_speed=profile["speed"])
+    
+    if profile["bass_boost"]:
+        modified_audio = low_pass_filter(modified_audio, 1000)
+    
+    return modified_audio
+
+@app.route("/generate_script", methods=["POST"])
 def generate_script():
-    """Generates a podcast script from user input."""
     try:
-        data = request.json
-        if not data or not all(k in data for k in ["topic", "duration", "speakers", "mood", "location"]):
+        data = request.get_json()
+        topic = data.get("topic")
+        duration = data.get("duration")
+        num_speakers = data.get("num_speakers", 1)
+        speakers = data.get("speakers", [])
+        mood = data.get("mood", "Engaging")
+        location = data.get("location", "Studio")
+        pitch = data.get("pitch", 1.0)
+        tone = data.get("tone", "Neutral")
+
+        if not topic or not duration or not speakers:
             return jsonify({"error": "Missing required fields"}), 400
 
-        script = script_gen.generate_script(data)
-
-        if not script.strip():
-            return jsonify({"error": "Failed to generate script"}), 500
+        script = script_generator.generate_script({
+            "topic": topic,
+            "duration": duration,
+            "num_speakers": num_speakers,
+            "speakers": speakers,
+            "mood": mood,
+            "location": location,
+            "pitch": pitch,
+            "tone": tone,
+            "trendy": True
+        })
 
         return jsonify({"script": script})
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
 
-@app.route('/generate_audio', methods=['POST'])
+    except Exception as e:
+        print("❌ Error Generating Script:", e)
+        return jsonify({"error": "Failed to generate script"}), 500
+
+@app.route("/get-voices", methods=["GET"])
+def get_voices():
+    return jsonify({"voices": list(VOICE_PROFILES.keys())})
+
+@app.route("/generate_audio", methods=["POST"])
 def generate_audio():
-    """Generates audio from a script."""
     try:
         data = request.json
-        if not data or "script" not in data or "voice" not in data:
-            return jsonify({"error": "Missing required fields"}), 400
+        script = data.get("script", "").strip()
+        speakers = data.get("speakers", {})
 
-        audio = tts_engine.generate_audio(data["script"], speaker=data["voice"], volume=data.get("loudness", 1.0))
-        audio_buffer = io.BytesIO(audio)
+        if not script:
+            return jsonify({"error": "No text provided"}), 400
 
-        return send_file(audio_buffer, mimetype="audio/wav", as_attachment=True, download_name="podcast.wav")
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-    
-from pydub import AudioSegment
-import io
-import traceback
+        # Create final audio file
+        combined_audio = AudioSegment.silent(duration=500)
+        
+        # Process each script segment
+        segments = script.split("\n\n")
+        
+        for segment in segments:
+            if ":" in segment:
+                speaker_name, text = segment.split(":", 1)
+                speaker_name = speaker_name.strip()
+                text = text.strip()
 
-@app.route('/generate_podcast', methods=['POST'])
-def generate_podcast():
-    try:
-        data = request.json
-        required_fields = {"topic", "duration", "speakers", "mood", "location", "voice_mapping"}
+                # Get speaker settings
+                speaker_settings = speakers.get(speaker_name, {})
+                voice_type = speaker_settings.get("voice", "Bella")  # Default to Bella if not specified
+                voice_profile = VOICE_PROFILES.get(voice_type, VOICE_PROFILES["Bella"])
 
-        if not required_fields.issubset(data):
-            return jsonify({"error": "Missing required fields"}), 400
+                # Generate base audio with specific accent
+                temp_segment = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                tts = gTTS(text=text, lang=voice_profile["lang"], tld=voice_profile["tld"])
+                tts.save(temp_segment.name)
 
-        script = script_gen.generate_script(data)
-        full_audio = AudioSegment.silent(duration=500)  # Start with silence to merge properly
-
-        for line in script.split("\n\n"):
-            if ":" in line:
-                speaker, text = map(str.strip, line.split(":", 1))
-                voice = data["voice_mapping"].get(speaker, "Bella")  # Default to Bella
+                # Load and process audio segment
+                audio_segment = AudioSegment.from_mp3(temp_segment.name)
                 
-                audio_bytes = tts_engine.generate_audio(text, speaker=voice, volume=data.get("volume", 1.0))
-                
-                if audio_bytes:
-                    audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes), format="wav")
-                    full_audio += audio_segment + AudioSegment.silent(duration=300)  # Small pause between lines
+                # Apply voice profile and user modifications
+                modified_audio = process_audio_segment(audio_segment, voice_profile, speaker_settings)
 
-        # Convert final audio to bytes
-        audio_buffer = io.BytesIO()
-        full_audio.export(audio_buffer, format="wav")
-        audio_buffer.seek(0)
+                # Add processed segment with pause
+                combined_audio += modified_audio + AudioSegment.silent(duration=300)
 
-        return send_file(audio_buffer, mimetype="audio/wav", as_attachment=True, download_name="podcast.wav")
+                # Cleanup
+                temp_segment.close()
+                os.unlink(temp_segment.name)
+
+        # Export final audio
+        temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+        combined_audio.export(temp_audio.name, format="mp3")
+        
+        return send_file(
+            temp_audio.name,
+            mimetype="audio/mpeg",
+            as_attachment=True,
+            download_name="podcast.mp3"
+        )
 
     except Exception as e:
-        traceback.print_exc()
+        print(f"❌ Audio generation error: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
