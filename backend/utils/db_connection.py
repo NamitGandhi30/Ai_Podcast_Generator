@@ -9,7 +9,7 @@ import io
 class MongoDBAtlas:
     def __init__(self):
         # Replace with your MongoDB Atlas connection string
-        connection_string ="mongodb+srv://khot1509pranay:kr0RQAQlaREaOiHu@cluster1.eicte.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1"
+        connection_string = os.getenv("MONGODB_ATLAS_CONNECTION_STRING")
         
         try:
             # Initialize MongoDB client
