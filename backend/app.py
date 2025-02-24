@@ -3,7 +3,6 @@ import io
 import tempfile
 import traceback
 import requests
-import bingart
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from utils.script_generator import ScriptGenerator
@@ -11,8 +10,8 @@ from utils.db_connection import MongoDBAtlas
 from gtts import gTTS
 from pydub import AudioSegment
 from pydub.effects import speedup, low_pass_filter
-
-
+from pydub.utils import which
+AudioSegment.converter = which("ffmpeg")
 
 
 
@@ -34,7 +33,6 @@ script_generator = ScriptGenerator()
 db = MongoDBAtlas()
 
 # Set FFmpeg path
-AudioSegment.converter = r"C:\ffmpeg\ffmpeg-2025-02-20-git-bc1a3bfd2c-essentials_build\bin\ffmpeg.exe"
 
 # Voice profiles with different language/accent combinations
 VOICE_PROFILES = {

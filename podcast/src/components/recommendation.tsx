@@ -1,36 +1,37 @@
-import React from "react";
-import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React from "react"
+import { Card } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface Props {
-  topics?: string[];
+  topics?: string[]
 }
 
 const Recommendations: React.FC<Props> = ({ topics = [] }) => {
-  // Remove ** or * from topic titles
-  const cleanedTopics = topics.map(topic => topic.replace(/\*\*/g, "").replace(/\*/g, ""));
+  const cleanedTopics = topics.map(topic => topic.replace(/\*\*/g, "").replace(/\*/g, ""))
 
   if (!cleanedTopics.length) {
-    return <p className="text-gray-500 text-center">No recommendations found.</p>;
+    return null
   }
 
   return (
-    <Card className="p-4 w-full max-w-md mx-auto shadow-lg border border-gray-200">
-      <h2 className="text-lg font-semibold text-center mb-2">Recommended Topics</h2>
-      <ScrollArea className="max-h-60 overflow-y-auto">
-        <ul className="space-y-2">
-          {cleanedTopics.map((topic, index) => (
-            <li
-              key={index}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-all shadow-sm"
-            >
-              {topic}
-            </li>
-          ))}
-        </ul>
-      </ScrollArea>
+    <Card className="bg-gray-800 border-gray-700">
+      <div className="p-6">
+        <h2 className="text-xl font-semibold mb-4">Recommended Topics</h2>
+        <ScrollArea className="h-[200px]">
+          <ul className="space-y-2">
+            {cleanedTopics.map((topic, index) => (
+              <li
+                key={index}
+                className="p-3 bg-gray-700 rounded-lg transition-colors hover:bg-gray-600"
+              >
+                {topic}
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
+      </div>
     </Card>
-  );
-};
+  )
+}
 
-export default Recommendations;
+export default Recommendations
