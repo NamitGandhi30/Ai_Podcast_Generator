@@ -30,7 +30,6 @@ script_generator = ScriptGenerator()
 db = MongoDBAtlas()
 
 # Set FFmpeg path
-AudioSegment.converter = r"C:\ffmpeg\ffmpeg-2025-02-20-git-bc1a3bfd2c-essentials_build\bin\ffmpeg.exe"
 
 # Voice profiles with different language/accent combinations
 VOICE_PROFILES = {

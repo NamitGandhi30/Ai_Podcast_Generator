@@ -65,20 +65,20 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 interface FormProps {
-  onSubmit: (data: FormData) => void;
+  onSubmit: (data: FormData) => void
 }
 
 export default function Form({ onSubmit }: FormProps) {
   const [formData, setFormData] = useState<FormData>({ location: "", emotion: "" });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
+    e.preventDefault()
+    onSubmit(formData)
+  }
 
   return (
     <Card className="bg-gray-800 border-gray-700 p-6">

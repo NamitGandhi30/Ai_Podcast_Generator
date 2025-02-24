@@ -1,34 +1,30 @@
-import Link from 'next/link';
-import { Button } from './ui/button';
-import Image from 'next/image';
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import Link from 'next/link'
+import { Button } from './ui/button'
+import Image from 'next/image'
 
 const Header = () => {
-
   return (
-    <header className="fixed top-0 w-full bg-black/50 backdrop-blur-lg shadow-md h-18 px-4 flex items-center z-50">
-
-      <div className="container mx-auto flex justify-between items-center">
-        <Link href="/" className="flex">
+    <header className="fixed top-0 w-full bg-gray-900/80 backdrop-blur-lg z-50">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <Link href="/" className="flex items-center space-x-2">
           <Image
-            src={"/logo.png"}
+            src="/logo.png"
             alt="podify logo"
-            height={60}
-            width={200}
-            className="h-12 w-auto object-contain"
+            height={32}
+            width={32}
+            className="h-8 w-8 object-contain"
           />
-          <p className='text-4xl font-extrabold text-purple-800 my-3 mx-2'>Podify</p>
+          <span className="text-xl font-bold text-purple-400">Podify</span>
         </Link>
 
-        <div className="flex space-x-4">
-        <nav className="hidden md:flex space-x-4">
-          <Button variant="outline" className="border-purple-400 text-purple-400 hover:bg-purple-600 hover:text-white">
+        <nav className="hidden md:flex items-center space-x-4">
+          <Button variant="ghost" className="text-gray-300 hover:text-white">
             <Link href="/about">About</Link>
           </Button>
-          <Button variant="outline" className="border-purple-400 text-purple-400 hover:bg-purple-600 hover:text-white">
+          <Button variant="ghost" className="text-gray-300 hover:text-white">
             <Link href="/services">Services</Link>
           </Button>
-          <Button variant="outline" className="border-purple-400 text-purple-400 hover:bg-purple-600 hover:text-white">
+          <Button variant="ghost" className="text-gray-300 hover:text-white">
             <Link href="/contact">Contact</Link>
           </Button>
         </nav>
@@ -51,7 +47,7 @@ const Header = () => {
         </div>
       </div>
     </header>
-  );
-};
+  )
+}
 
-export default Header;
+export default Header
