@@ -347,7 +347,6 @@
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
-import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -357,14 +356,9 @@ import { Mic, AudioWaveformIcon as Waveform } from "lucide-react"
 import Footer from "@/components/footer"
 import Header from "@/components/header"
 import { FormData, ApiResponse } from "@/types"
-import { Mic, AudioWaveformIcon as Waveform } from "lucide-react"
-import Footer from "@/components/footer"
-import Header from "@/components/header"
-import { FormData, ApiResponse } from "@/types"
 import Recommendations from "@/components/recommendation"
 import Form from "@/components/recommend"
 
-const emotions = ["Happy", "Sad", "Angry", "Excited", "Neutral", "Fearful"]
 const emotions = ["Happy", "Sad", "Angry", "Excited", "Neutral", "Fearful"]
 
 interface Speaker {
@@ -380,15 +374,7 @@ export default function PodcastApp() {
   const [location, setLocation] = useState("")
   const [emotion, setEmotion] = useState("Professional")
   const [numSpeakers, setNumSpeakers] = useState(1)
-  const [topic, setTopic] = useState("")
-  const [location, setLocation] = useState("")
-  const [emotion, setEmotion] = useState("Professional")
-  const [numSpeakers, setNumSpeakers] = useState(1)
   const [speakers, setSpeakers] = useState<Record<string, Speaker>>({})
-  const [script, setScript] = useState("")
-  const [audioUrl, setAudioUrl] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
   const [script, setScript] = useState("")
   const [audioUrl, setAudioUrl] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -403,10 +389,6 @@ export default function PodcastApp() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),
-    })
-    const data: ApiResponse = await response.json()
-    setRecommendations(data.topics)
-  }
     })
     const data: ApiResponse = await response.json()
     setRecommendations(data.topics)
@@ -450,7 +432,6 @@ export default function PodcastApp() {
       const scriptRes = await fetch("http://127.0.0.1:5000/generate_script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic,
           location,
@@ -461,16 +442,12 @@ export default function PodcastApp() {
         }),
       })
 
-
       const scriptData = await scriptRes.json()
-      if (scriptData.error) throw new Error(scriptData.error)
       if (scriptData.error) throw new Error(scriptData.error)
       setScript(scriptData.script)
 
-
       const audioRes = await fetch("http://127.0.0.1:5000/generate_audio", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           script: scriptData.script,
@@ -489,15 +466,12 @@ export default function PodcastApp() {
         }),
       })
 
-
       if (!audioRes.ok) {
         const audioError = await audioRes.text()
         throw new Error(audioError)
       }
 
-
       const audioBlob = await audioRes.blob()
-      setAudioUrl(URL.createObjectURL(audioBlob))
       setAudioUrl(URL.createObjectURL(audioBlob))
     } catch (error) {
       setError("Failed to generate content. Please try again.")
@@ -509,12 +483,7 @@ export default function PodcastApp() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
       <Header />
-      <main className="container mx-auto px-4 py-20 max-w-6xl">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-2">AI Podcast Generator</h1>
-          <p className="text-gray-400">Create professional podcasts with AI</p>
       <main className="container mx-auto px-4 py-20 max-w-6xl">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-2">AI Podcast Generator</h1>
@@ -555,23 +524,7 @@ export default function PodcastApp() {
                     placeholder="Recording location"
                     className="bg-gray-700 border-gray-600"
                   />
-                  <Input
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Recording location"
-                    className="bg-gray-700 border-gray-600"
-                  />
 
-                  <Select value={emotion} onValueChange={setEmotion}>
-                    <SelectTrigger className="bg-gray-700 border-gray-600">
-                      <SelectValue placeholder="Select emotion" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {emotions.map((emo) => (
-                        <SelectItem key={emo} value={emo}>{emo}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <Select value={emotion} onValueChange={setEmotion}>
                     <SelectTrigger className="bg-gray-700 border-gray-600">
                       <SelectValue placeholder="Select emotion" />
@@ -584,18 +537,6 @@ export default function PodcastApp() {
                   </Select>
                 </div>
 
-                <Select
-                  value={numSpeakers.toString()}
-                  onValueChange={(value) => setNumSpeakers(Number(value))}
-                >
-                  <SelectTrigger className="bg-gray-700 border-gray-600">
-                    <SelectValue placeholder="Number of speakers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 Speaker</SelectItem>
-                    <SelectItem value="2">2 Speakers</SelectItem>
-                  </SelectContent>
-                </Select>
                 <Select
                   value={numSpeakers.toString()}
                   onValueChange={(value) => setNumSpeakers(Number(value))}
@@ -648,56 +589,16 @@ export default function PodcastApp() {
                       />
                     </div>
                   </div>
-                  <div key={speakerKey} className="bg-gray-700 p-4 rounded-lg space-y-4">
-                    <h3 className="font-medium">{speakerKey}</h3>
-                    <Select
-                      value={speaker.voice}
-                      onValueChange={(value) => {
-                        setSpeakers((prev) => ({
-                          ...prev,
-                          [speakerKey]: { ...prev[speakerKey], voice: value },
-                        }))
-                      }}
-                    >
-                      <SelectTrigger className="bg-gray-600 border-gray-500">
-                        <SelectValue placeholder="Select voice" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableVoices.map((voice) => (
-                          <SelectItem key={voice} value={voice}>{voice}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <div>
-                      <label className="text-sm text-gray-400">Voice Pitch</label>
-                      <Slider
-                        value={[speaker.pitch * 100]}
-                        min={50}
-                        max={200}
-                        step={1}
-                        onValueChange={(value) => {
-                          setSpeakers((prev) => ({
-                            ...prev,
-                            [speakerKey]: { ...prev[speakerKey], pitch: value[0] / 100 },
-                          }))
-                        }}
-                        className="mt-2"
-                      />
-                    </div>
-                  </div>
                 ))}
 
                 <Button
                   onClick={generateContent}
                   disabled={isLoading || !topic}
                   className="w-full bg-purple-600 hover:bg-purple-700"
-                  className="w-full bg-purple-600 hover:bg-purple-700"
                 >
                   <Mic className="w-4 h-4 mr-2" />
                   {isLoading ? "Generating..." : "Generate Podcast"}
                 </Button>
-              </div>
               </div>
             </Card>
 
@@ -707,22 +608,15 @@ export default function PodcastApp() {
               </Alert>
             )}
           </section>
-          </section>
 
-          <section className="space-y-6">
           <section className="space-y-6">
             {script && (
               <Card className="bg-gray-800 border-gray-700">
                 <div className="p-6">
                   <h2 className="text-xl font-semibold mb-4">Generated Script</h2>
                   <div className="bg-gray-700 p-4 rounded-lg max-h-80 overflow-y-auto">
-              <Card className="bg-gray-800 border-gray-700">
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">Generated Script</h2>
-                  <div className="bg-gray-700 p-4 rounded-lg max-h-80 overflow-y-auto">
                     <p className="whitespace-pre-wrap">{script}</p>
                   </div>
-                </div>
                 </div>
               </Card>
             )}
@@ -731,12 +625,8 @@ export default function PodcastApp() {
               <Card className="bg-gray-800 border-gray-700">
                 <div className="p-6">
                   <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Card className="bg-gray-800 border-gray-700">
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <Waveform className="w-5 h-5" />
                     Audio Preview
-                  </h2>
                   </h2>
                   <audio
                     src={audioUrl}
@@ -745,10 +635,8 @@ export default function PodcastApp() {
                     onError={() => setError("Failed to load audio")}
                   />
                 </div>
-                </div>
               </Card>
             )}
-          </section>
           </section>
         </div>
 
@@ -763,6 +651,5 @@ export default function PodcastApp() {
       </main>
       <Footer />
     </div>
-  )
   )
 }
