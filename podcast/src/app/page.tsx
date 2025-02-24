@@ -1,269 +1,343 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Slider } from "@/components/ui/slider"
+import { Mic, Play, Volume2, AudioWaveformIcon as Waveform } from "lucide-react"
+import  Footer  from "@/components/footer"
+import Header  from "@/components/header"
+
+import { FormData, ApiResponse } from "@/types";
+import Recommendations from "@/components/recommendation"
+import Form from "@/components/recommend"
+
 
 interface Speaker {
-  name: string;
-  voice: string;
-  pitch: number;
-  loudness: number;
-  tone: string;
+  name: string
+  voice: string
+  pitch: number
+  loudness: number
+  emotion: string
 }
 
+const emotions = ["Happy", "Sad", "Angry", "Excited", "Neutral", "Fearful"]
+const locations = ["Studio", "Outdoor", "Office", "Home", "Concert Hall"]
+
 export default function PodcastApp() {
-  const [topic, setTopic] = useState<string>("");
-  const [duration, setDuration] = useState<string>("5");
-  const [numSpeakers, setNumSpeakers] = useState<number>(1);
-  const [speakers, setSpeakers] = useState<Record<string, Speaker>>({});
-  const [script, setScript] = useState<string>("");
-  const [audioUrl, setAudioUrl] = useState<string>("");
-  const [availableVoices, setAvailableVoices] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
+  const [topic, setTopic] = useState<string>("")
+  const [location, setLocation] = useState<string>("")
+  const [emotion, setEmotion] = useState<string>("Professional")
+  const [numSpeakers, setNumSpeakers] = useState<number>(1)
+  const [speakers, setSpeakers] = useState<Record<string, Speaker>>({})
+  const [script, setScript] = useState<string>("")
+  const [audioUrl, setAudioUrl] = useState<string>("")
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string>("")
+  const [availableVoices, setAvailableVoices] = useState<string[]>([])
+
+  const [recommendations, setRecommendations] = useState<string[]>([]);
+
+  const handleSubmit = async (formData: FormData) => {
+    const response = await fetch("/api/recommend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+
+    const data: ApiResponse = await response.json();
+    setRecommendations(data.topics);
+  };
 
   useEffect(() => {
-    // Fetch available voices when component mounts
     const fetchVoices = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/get-voices");
-        const data = await res.json();
-        setAvailableVoices(data.voices);
+        const res = await fetch("http://127.0.0.1:5000/get-voices")
+        const data = await res.json()
+        setAvailableVoices(data.voices)
       } catch (error) {
-        console.error("Failed to fetch voices:", error);
-        setError("Failed to load available voices");
+        console.error("Failed to fetch voices:", error)
+        setError("Failed to load available voices")
       }
-    };
+    }
 
-    fetchVoices();
-  }, []);
+    fetchVoices()
+  }, [])
 
-  // Initialize or update speaker when numSpeakers changes
   useEffect(() => {
-    setSpeakers(prev => {
-      const newSpeakers: Record<string, Speaker> = {};
+    setSpeakers((prev) => {
+      const newSpeakers: Record<string, Speaker> = {}
       for (let i = 1; i <= numSpeakers; i++) {
-        const speakerKey = `Speaker ${i}`;
+        const speakerKey = `Speaker ${i}`
         newSpeakers[speakerKey] = prev[speakerKey] || {
           name: speakerKey,
-          voice: availableVoices[0] || "Bella",
+          voice: availableVoices[0] || "Default",
           pitch: 1.0,
           loudness: 1.0,
-          tone: "Neutral"
-        };
+          emotion: "Neutral",
+        }
       }
-      return newSpeakers;
-    });
-  }, [numSpeakers, availableVoices]);
+      return newSpeakers
+    })
+  }, [numSpeakers, availableVoices])
 
-  const handleSpeakerChange = (index: number, field: keyof Speaker, value: string | number) => {
-    const speakerKey = `Speaker ${index + 1}`;
-    setSpeakers(prev => ({
-      ...prev,
-      [speakerKey]: { ...prev[speakerKey], [field]: value }
-    }));
-  };
-
-  const fetchScript = async () => {
-    setIsLoading(true);
-    setError("");
+  const generateContent = async () => {
+    setIsLoading(true)
+    setError("")
     try {
-      const res = await fetch("http://127.0.0.1:5000/generate_script", {
+      const scriptRes = await fetch("http://127.0.0.1:5000/generate_script", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           topic,
-          duration,
+          location,
+          emotion,
+          duration: "5",
           speakers: Object.keys(speakers),
-          mood: "Engaging",
-          location: "Studio"
+          mood: emotion,
         }),
-      });
-    
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setScript(data.script);
-    } catch (error) {
-      setError("Failed to generate script. Please try again.");
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchAudio = async () => {
-    if (!script) {
-      setError("No script available for audio generation.");
-      return;
-    }
+      })
   
-    setIsLoading(true);
-    setError("");
-    try {
-      const res = await fetch("http://127.0.0.1:5000/generate_audio", {
+      const scriptData = await scriptRes.json()
+      if (scriptData.error) {
+        throw new Error(scriptData.error)
+      }
+      setScript(scriptData.script)
+  
+      const audioRes = await fetch("http://127.0.0.1:5000/generate_audio", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ script, speakers }),
-      });
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          script: scriptData.script,
+          speakers: Object.fromEntries(
+            Object.entries(speakers).map(([key, speaker]) => [
+              key,
+              {
+                ...speaker,
+                voice: speaker.voice || availableVoices[0],
+                pitch: speaker.pitch || 1.0,
+                loudness: speaker.loudness || 1.0,
+                emotion: speaker.emotion || "Neutral"
+              }
+            ])
+          )
+        }),
+      })
   
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText);
+      if (!audioRes.ok) {
+        const audioError = await audioRes.text()
+        throw new Error(audioError)
       }
   
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      setAudioUrl(url);
+      const audioBlob = await audioRes.blob()
+      const audioUrl = URL.createObjectURL(audioBlob)
+      setAudioUrl(audioUrl)
+  
     } catch (error) {
-      setError("Failed to generate audio. Please try again.");
-      console.error(error);
+      setError("Failed to generate content. Please try again.")
+      console.error(error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold text-center flex items-center justify-center gap-2">
-        🎙️ Podcast Generator
-      </h1>
-      
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="flex flex-col gap-4">
-        <Input 
-          value={topic} 
-          onChange={(e) => setTopic(e.target.value)} 
-          placeholder="Enter Podcast Topic" 
-          className="p-2 border rounded-md"
-        />
+    <div className="min-h-screen bg-gradient-to-b from-black to-purple-900 text-white pt-20">
+      <Header />
+      <div
+        className="mx-auto py-8 relative bg-gray-900 text-white min-h-screen w-screen items-center text-center px-6 overflow-hidden bg-cover bg-center"
+        style={{ backgroundImage: `url('/bg1.webp')` }}
+      >
         
-        <div className="flex gap-4">
-          <Select value={duration} onValueChange={setDuration}>
-            <SelectTrigger className="w-32">
-              {duration} minutes
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="5">5 minutes</SelectItem>
-              <SelectItem value="10">10 minutes</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="text-center mb-12 my-10">
+          <h1 className="text-4xl font-bold mb-4">🎙️ AI Podcast Generator</h1>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Create professional podcasts with AI. Just enter your topic, choose
+            your settings, and let our technology do the rest.
+          </p>
+        </div>
+        <div className="flex flex-col items-center p-4">
+          <h1 className="text-2xl font-bold mb-4">Topic Recommender</h1>
+          <Form onSubmit={handleSubmit} />
+          <Recommendations topics={recommendations} />
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            <Card className="max-w-lg mx-auto">
+              <CardHeader>
+                <CardTitle>Podcast Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Topic</label>
+                  <Input
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="Enter your podcast topic"
+                    className="w-full"
+                  />
+                </div>
 
-          <Select value={numSpeakers.toString()} onValueChange={(value) => setNumSpeakers(Number(value))}>
-            <SelectTrigger className="w-32">
-              {numSpeakers} Speaker{numSpeakers > 1 ? "s" : ""}
-            </SelectTrigger>
-            <SelectContent>
-              {[1, 2, 3, 4].map((n) => (
-                <SelectItem key={n} value={n.toString()}>
-                  {n} Speaker{n > 1 ? "s" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Location</label>
+                    <Input
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Enter your recording location"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Emotion</label>
+                    <Select value={emotion} onValueChange={setEmotion}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select emotion" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {emotions.map((emo) => (
+                          <SelectItem key={emo} value={emo}>
+                            {emo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Number of Speakers (max 2)
+                  </label>
+                  <Select
+                    value={numSpeakers.toString()}
+                    onValueChange={(value) => setNumSpeakers(Number(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select number of speakers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Speaker</SelectItem>
+                      <SelectItem value="2">2 Speakers</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {Object.entries(speakers).map(([speakerKey, speaker]) => (
+                  <Card key={speakerKey} className="p-4">
+                    <CardContent className="space-y-4">
+                      <h3 className="font-semibold">{speakerKey}</h3>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Voice</label>
+                        <Select
+                          value={speaker.voice}
+                          onValueChange={(value) => {
+                            setSpeakers((prev) => ({
+                              ...prev,
+                              [speakerKey]: {
+                                ...prev[speakerKey],
+                                voice: value,
+                              },
+                            }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select voice" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableVoices.map((voice) => (
+                              <SelectItem key={voice} value={voice}>
+                                {voice}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Voice Pitch
+                        </label>
+                        <Slider
+                          value={[speaker.pitch * 100]}
+                          min={50}
+                          max={200}
+                          step={1}
+                          onValueChange={(value) => {
+                            setSpeakers((prev) => ({
+                              ...prev,
+                              [speakerKey]: {
+                                ...prev[speakerKey],
+                                pitch: value[0] / 100,
+                              },
+                            }));
+                          }}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                <Button
+                  onClick={generateContent}
+                  disabled={isLoading || !topic}
+                  className="w-full"
+                >
+                  <Mic className="w-4 h-4 mr-2" />
+                  {isLoading ? "Generating..." : "Generate Podcast"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <div className="space-y-6 ">
+            {script && (
+              <Card className="max-w-xl mx-auto">
+                <CardHeader>
+                  <CardTitle>Generated Script</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 rounded-lg ">
+                    <p className="whitespace-pre-wrap">{script}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {audioUrl && (
+              <Card className="max-w-xl mx-auto">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Waveform className="w-5 h-5" />
+                    Audio Preview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <audio
+                    src={audioUrl}
+                    controls
+                    className="w-full"
+                    onError={() => setError("Failed to load audio")}
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: numSpeakers }).map((_, i) => (
-          <Card key={i} className="p-4 shadow-lg rounded-lg">
-            <CardContent className="space-y-2">
-              <h2 className="text-lg font-semibold">🎤 Speaker {i + 1}</h2>
-              <Input 
-                value={speakers[`Speaker ${i + 1}`]?.name || ""}
-                onChange={(e) => handleSpeakerChange(i, "name", e.target.value)}
-                placeholder="Speaker Name"
-                className="p-2 border rounded-md"
-              />
-              
-              <Select 
-                value={speakers[`Speaker ${i + 1}`]?.voice || availableVoices[0]}
-                onValueChange={(value) => handleSpeakerChange(i, "voice", value)}
-              >
-                <SelectTrigger className="w-full">
-                  {speakers[`Speaker ${i + 1}`]?.voice || "Select Voice"}
-                </SelectTrigger>
-                <SelectContent>
-                  {availableVoices.map((voice) => (
-                    <SelectItem key={voice} value={voice}>
-                      {voice}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Input 
-                type="number"
-                value={speakers[`Speaker ${i + 1}`]?.pitch || 1.0}
-                onChange={(e) => handleSpeakerChange(i, "pitch", Number(e.target.value))}
-                placeholder="Pitch (1.0 default)"
-                step="0.1"
-                min="0.5"
-                max="2.0"
-                className="p-2 border rounded-md"
-              />
-              
-              <Input 
-                type="number"
-                value={speakers[`Speaker ${i + 1}`]?.loudness || 1.0}
-                onChange={(e) => handleSpeakerChange(i, "loudness", Number(e.target.value))}
-                placeholder="Loudness (1.0 default)"
-                step="0.1"
-                min="0.5"
-                max="2.0"
-                className="p-2 border rounded-md"
-              />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="flex justify-center gap-4">
-        <Button 
-          onClick={fetchScript} 
-          disabled={isLoading || !topic}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md"
-        >
-          {isLoading ? "Generating..." : "Generate Script"}
-        </Button>
-        
-        {script && (
-          <Button 
-            onClick={fetchAudio} 
-            disabled={isLoading || !script}
-            className="px-4 py-2 bg-green-500 text-white rounded-md"
-          >
-            {isLoading ? "Generating..." : "Generate Podcast"}
-          </Button>
-        )}
-      </div>
-
-      {script && (
-        <Card className="mt-4 p-4 shadow-lg">
-          <CardContent>
-            <p className="whitespace-pre-wrap">{script}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {audioUrl && (
-        <div className="mt-4 flex justify-center">
-          <audio 
-            src={audioUrl} 
-            controls 
-            className="w-full max-w-lg" 
-            onError={() => setError("Failed to load audio")}
-          />
-        </div>
-      )}
+      <Footer />
     </div>
   );
 }

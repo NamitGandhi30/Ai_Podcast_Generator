@@ -6,7 +6,8 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 const Header = () => {
 
   return (
-    <header className="fixed top-0 w-full bg-black/50 backdrop-blur-lg shadow-md p-4 z-50">
+    <header className="fixed top-0 w-full bg-black/50 backdrop-blur-lg shadow-md h-18 px-4 flex items-center z-50">
+
       <div className="container mx-auto flex justify-between items-center">
         <Link href="/" className="flex">
           <Image
@@ -33,7 +34,7 @@ const Header = () => {
         </nav>
 
         
-          <SignedOut>
+          {/* <SignedOut>
           <SignInButton forceRedirectUrl="/sign-in" >
               <Button variant="outline" className="bg-purple-600 text-white hover:bg-purple-700">Login</Button>
             </SignInButton>
@@ -46,7 +47,7 @@ const Header = () => {
                 },
               }}
             />
-          </SignedIn>
+          </SignedIn> */}
         </div>
       </div>
     </header>
