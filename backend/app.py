@@ -12,10 +12,6 @@ from gtts import gTTS
 from pydub import AudioSegment
 from pydub.effects import speedup, low_pass_filter
 
-
-
-
-
 app = Flask(__name__)
 CORS(app, 
      resources={
@@ -225,32 +221,16 @@ def generate_audio():
 
 
 
-# @app.route("/generate_image", methods=["POST"])
-# def generate_image():
-#     data = request.json
-#     prompt = data.get("prompt", "").strip()
 
-#     if not prompt:
-#         return jsonify({"error": "No prompt provided"}), 400
-
-#     try:
-#         images = bing_art.generate_images(prompt)  # # ✅ Correct usage
-#         if images:
-#             return jsonify({"image_url": images[0]})
-#         else:
-#             return jsonify({"error": "No images generated"}), 500
-#     except Exception as e:
-#         print("❌ BingArt error:", str(e))
-#         return jsonify({"error": "Image generation failed"}), 500
     
 
-# @app.after_request
-# def after_request(response):
-#     response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-#     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-#     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-#     response.headers.add('Access-Control-Allow-Credentials', 'true')
-#     return response    
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response    
 
 @app.route('/generate_podcast', methods=['POST'])
 def generate_podcast():

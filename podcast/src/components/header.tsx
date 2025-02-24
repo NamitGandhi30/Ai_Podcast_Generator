@@ -34,7 +34,7 @@ const Header = () => {
         </nav>
 
         
-          {/* <SignedOut>
+          <SignedOut>
           <SignInButton forceRedirectUrl="/sign-in" >
               <Button variant="outline" className="bg-purple-600 text-white hover:bg-purple-700">Login</Button>
             </SignInButton>
@@ -47,7 +47,7 @@ const Header = () => {
                 },
               }}
             />
-          </SignedIn> */}
+          </SignedIn>
         </div>
       </div>
     </header>
