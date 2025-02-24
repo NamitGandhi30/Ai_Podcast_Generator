@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Button } from './ui/button'
 import Image from 'next/image'
+import { UserButton } from '@clerk/nextjs'
+import { SignedIn, SignedOut, SignInButton } from '@clerk/nextjs'
 
 const Header = () => {
   return (
@@ -44,7 +46,6 @@ const Header = () => {
               }}
             />
           </SignedIn>
-        </div>
       </div>
     </header>
   )
