@@ -3,7 +3,7 @@ import io
 import tempfile
 import traceback
 import requests
-import bingart
+
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from utils.script_generator import ScriptGenerator
