@@ -3,6 +3,9 @@ import io
 import tempfile
 import traceback
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS

@@ -1,9 +1,10 @@
+import os
 import PyPDF2
 import json
 import google.generativeai as genai
 
 # Configure Google Gemini AI
-genai.configure(api_key="AIzaSyB9hLd4QhKScSz5ITXgb3UHrO7LBeFog2Q")
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 gemini_model = genai.GenerativeModel('gemini-pro')
 
 def extract_text_from_pdf(file_path):
