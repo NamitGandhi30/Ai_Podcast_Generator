@@ -8,6 +8,9 @@ venv/
 env/
 .conda/
 
+# Downloaded TTS model weights
+.model_cache/
+
 # Python cache files
 __pycache__/
 *.py[cod]

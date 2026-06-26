@@ -367,6 +367,8 @@ interface Speaker {
   pitch: number
   loudness: number
   emotion: string
+  clonedVoiceId?: string
+  language?: string
 }
 
 export default function PodcastApp() {
@@ -459,7 +461,10 @@ export default function PodcastApp() {
                 voice: speaker.voice || availableVoices[0],
                 pitch: speaker.pitch || 1.0,
                 loudness: speaker.loudness || 1.0,
-                emotion: speaker.emotion || "Neutral"
+                emotion: speaker.emotion || "Neutral",
+                ...(speaker.clonedVoiceId
+                  ? { cloned_voice_id: speaker.clonedVoiceId, language: speaker.language || "en" }
+                  : {})
               }
             ])
           )
@@ -571,6 +576,62 @@ export default function PodcastApp() {
                         ))}
                       </SelectContent>
                     </Select>
+
+                    <div>
+                      <label className="text-sm text-gray-400">Clone a voice (optional)</label>
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="block w-full text-sm text-gray-300 mt-1"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const formData = new FormData()
+                          formData.append("reference_audio", file)
+                          try {
+                            const res = await fetch("http://127.0.0.1:5000/clone-voice", {
+                              method: "POST",
+                              body: formData,
+                            })
+                            const data = await res.json()
+                            if (data.error) throw new Error(data.error)
+                            setSpeakers((prev) => ({
+                              ...prev,
+                              [speakerKey]: { ...prev[speakerKey], clonedVoiceId: data.voice_id },
+                            }))
+                          } catch (err) {
+                            console.error("Voice cloning upload failed:", err)
+                            setError("Failed to upload voice sample for cloning")
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        A short, animated/expressive clip clones with more expressive results. Preset voices above are English-only — cloning is required for other languages.
+                      </p>
+                      {speaker.clonedVoiceId && (
+                        <p className="text-xs text-green-400 mt-1">Voice sample uploaded — will use cloned voice</p>
+                      )}
+                    </div>
+
+                    {speaker.clonedVoiceId && (
+                      <Select
+                        value={speaker.language || "en"}
+                        onValueChange={(value) => {
+                          setSpeakers((prev) => ({
+                            ...prev,
+                            [speakerKey]: { ...prev[speakerKey], language: value },
+                          }))
+                        }}
+                      >
+                        <SelectTrigger className="bg-gray-600 border-gray-500">
+                          <SelectValue placeholder="Select language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en">English</SelectItem>
+                          <SelectItem value="hi">Hindi</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
 
                     <div>
                       <label className="text-sm text-gray-400">Voice Pitch</label>

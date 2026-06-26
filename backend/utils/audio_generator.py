@@ -138,7 +138,7 @@ def generate_audio():
         )
 
     except Exception as e:
-        print(f"❌ Audio generation error: {str(e)}")
+        print(f"Audio generation error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

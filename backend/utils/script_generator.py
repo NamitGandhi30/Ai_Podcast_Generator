@@ -13,36 +13,36 @@ class ScriptGenerator:
         return ["AI Ethics", "Climate Tech", "Web3 Innovations", "Quantum Computing"]
 
     def generate_script(self, user_input: Dict):
-        try:  # ✅ FIXED: Correct indentation
-            print("✅ Received Input:", user_input)
+        try:
+            print("Received Input:", user_input)
             prompt = self._build_prompt(user_input)
-            print("📜 Generated Prompt:", prompt)
+            print("Generated Prompt:", prompt)
 
             response = self.model.generate_content(prompt)
-            print("🔄 Raw Response Object:", response)
+            print("Raw Response Object:", response)
 
-            # ✅ Ensure response contains valid text
+            # Ensure response contains valid text
             if not response or not hasattr(response, "candidates") or not response.candidates:
-                print("❌ Error: Gemini AI returned an empty response")
+                print("Error: Gemini AI returned an empty response")
                 return "Error: Gemini AI did not return valid text."
 
-            # ✅ Updated response extraction (Fix KeyError issues)
+            # Updated response extraction (Fix KeyError issues)
             first_candidate = response.candidates[0]
 
             if not hasattr(first_candidate, "content") or not first_candidate.content.parts:
-                print("❌ Error: Missing content in response")
+                print("Error: Missing content in response")
                 return "Error: No content received from AI model."
 
-            script_text = first_candidate.content.parts[0].text  # ✅ Correct response extraction
-            print("📝 Raw Script Text:", script_text)
+            script_text = first_candidate.content.parts[0].text  # Correct response extraction
+            print("Raw Script Text:", script_text)
 
             cleaned_script = self._clean_script(script_text, user_input["speakers"])
-            print("✅ Cleaned Script:", cleaned_script)
+            print("Cleaned Script:", cleaned_script)
 
             return cleaned_script
 
         except Exception as e:
-            print("❌ Error Generating Script:", e)
+            print("Error Generating Script:", e)
             return "Error: Failed to generate script."
 
     def _build_prompt(self, user_input: Dict):

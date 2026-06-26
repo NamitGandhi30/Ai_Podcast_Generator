@@ -13,13 +13,13 @@ class MongoDBAtlas:
         
         try:
             # Initialize MongoDB client
-            self.client = MongoClient(connection_string)
+            self.client = MongoClient(connection_string, serverSelectionTimeoutMS=5000)
             self.db = self.client.podcast_db  # Database name
             self.fs = gridfs.GridFS(self.db)  # For storing large audio files
-            print("✅ Connected to MongoDB Atlas successfully!")
-            
+            print("Connected to MongoDB Atlas successfully!")
+
         except Exception as e:
-            print(f"❌ Failed to connect to MongoDB Atlas: {str(e)}")
+            print(f"Failed to connect to MongoDB Atlas: {str(e)}")
             raise
 
     def store_audio(self, audio_data, metadata):
@@ -48,11 +48,11 @@ class MongoDBAtlas:
                 **file_metadata
             )
             
-            print(f"✅ Audio file stored successfully with ID: {file_id}")
+            print(f"Audio file stored successfully with ID: {file_id}")
             return str(file_id)
-            
+
         except Exception as e:
-            print(f"❌ Failed to store audio file: {str(e)}")
+            print(f"Failed to store audio file: {str(e)}")
             raise
 
     def retrieve_audio(self, file_id):
@@ -71,7 +71,7 @@ class MongoDBAtlas:
             return audio_file.read()
             
         except Exception as e:
-            print(f"❌ Failed to retrieve audio file: {str(e)}")
+            print(f"Failed to retrieve audio file: {str(e)}")
             raise
 
     def close(self):

@@ -30,20 +30,20 @@ def generate_audio_with_speakers(script, speakers):
                     pitch = speaker_config.get("pitch", 1.0)
                     loudness = speaker_config.get("loudness", 1.0)
 
-                    # ✅ Generate voice using gTTS
+                    # Generate voice using gTTS
                     tts = gTTS(text=text, lang="en")
                     temp_file = tempfile.mktemp(suffix=".mp3")
                     tts.save(temp_file)
 
-                    # ✅ Load and apply pitch & loudness modifications
+                    # Load and apply pitch & loudness modifications
                     audio_segment = AudioSegment.from_file(temp_file, format="mp3")
                     audio_segment = audio_segment + (loudness * 5)  # Adjust volume
                     combined_audio += audio_segment
 
-        # ✅ Export final combined audio
+        # Export final combined audio
         combined_audio.export(temp_audio_path, format="mp3")
         return temp_audio_path
 
     except Exception as e:
-        print("❌ Error in voice processing:", str(e))
+        print("Error in voice processing:", str(e))
         return None
