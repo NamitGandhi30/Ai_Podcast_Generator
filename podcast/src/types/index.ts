@@ -1,4 +1,4 @@
-export interface FormData {
+export interface RecommendFormData {
     location: string;
     emotion: string;
   }

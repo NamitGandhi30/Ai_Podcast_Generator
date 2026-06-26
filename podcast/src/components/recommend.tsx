@@ -59,17 +59,17 @@
 // }
 
 import { useState } from "react";
-import { FormData } from "@/types";
+import { RecommendFormData } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 interface FormProps {
-  onSubmit: (data: FormData) => void
+  onSubmit: (data: RecommendFormData) => void
 }
 
 export default function Form({ onSubmit }: FormProps) {
-  const [formData, setFormData] = useState<FormData>({ location: "", emotion: "" });
+  const [formData, setFormData] = useState<RecommendFormData>({ location: "", emotion: "" });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })

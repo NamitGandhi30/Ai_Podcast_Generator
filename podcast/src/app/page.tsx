@@ -11,7 +11,7 @@
 // import  Footer  from "@/components/footer"
 // import Header  from "@/components/header"
 
-// import { FormData, ApiResponse } from "@/types";
+// import { RecommendFormData, ApiResponse } from "@/types";
 // import Recommendations from "@/components/recommendation"
 // import Form from "@/components/recommend"
 
@@ -41,7 +41,7 @@
 
 //   const [recommendations, setRecommendations] = useState<string[]>([]);
 
-//   const handleSubmit = async (formData: FormData) => {
+//   const handleSubmit = async (formData: RecommendFormData) => {
 //     const response = await fetch("/api/recommend", {
 //       method: "POST",
 //       headers: { "Content-Type": "application/json" },
@@ -355,7 +355,7 @@ import { Slider } from "@/components/ui/slider"
 import { Mic, AudioWaveformIcon as Waveform } from "lucide-react"
 import Footer from "@/components/footer"
 import Header from "@/components/header"
-import { FormData, ApiResponse } from "@/types"
+import { RecommendFormData, ApiResponse } from "@/types"
 import Recommendations from "@/components/recommendation"
 import Form from "@/components/recommend"
 
@@ -386,7 +386,7 @@ export default function PodcastApp() {
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (formData: RecommendFormData) => {
     const response = await fetch("/api/recommend", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

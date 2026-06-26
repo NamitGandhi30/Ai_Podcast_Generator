@@ -6,7 +6,7 @@ from typing import Dict, List
 class ScriptGenerator:
     def __init__(self):
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        self.model = genai.GenerativeModel("gemini-pro")
+        self.model = genai.GenerativeModel("gemini-2.5-flash")
         self.trend_topics = self._get_trending_topics()
 
     def _get_trending_topics(self):
@@ -67,7 +67,11 @@ class ScriptGenerator:
 
         for line in script.split("\n"):
             if ":" in line:
-                speaker, dialogue = map(str.strip, line.split(":", 1))
+                speaker_raw, dialogue = map(str.strip, line.split(":", 1))
+                # Gemini wraps speaker names in markdown bold (**Speaker 1**), strip markdown chars before matching
+                # (keep digits/spaces so names like "Speaker 1" still match)
+                speaker = re.sub(r"[^a-zA-Z0-9\s]", "", speaker_raw).strip()
+                dialogue = re.sub(r"\*+", "", dialogue).strip()
                 if speaker.lower() in valid_speakers and len(dialogue) > 5:
                     cleaned_lines.append(f"{valid_speakers[speaker.lower()]}: {dialogue}")
 
